@@ -28,13 +28,22 @@ public class BoosterBot extends TelegramLongPollingBot {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
             String userFirstName = update.getMessage().getFrom().getFirstName();
-
             if ("/compliment".equals(messageText)) {
                 String answer = complimentService.getRandomCompliment(userFirstName);
                 sendAnswer(chatId, answer);
-                // Логирование по требованию Минаковой (Sprint 1)
-                System.out.println("LOG: Пользователь " + userFirstName + " получил комплимент.");
+                System.out.println("LOG: Пользователь " + userFirstName + " получил комплимент: [" + answer + "]");
+
+            } else if (messageText.startsWith("/")) {
+                sendAnswer(chatId, "Извини, " + userFirstName + ", я пока знаю только команду /compliment");
+                System.out.println("LOG: Пользователь " + userFirstName + " ввел неизвестную команду: " + messageText);
+
+            } else {
+                sendAnswer(chatId, "Пожалуйста, используй команду /compliment, чтобы я мог тебя подбодрить!");
             }
+        } else if (update.hasMessage()) {
+            long chatId = update.getMessage().getChatId();
+            sendAnswer(chatId, "Я понимаю только текстовые команды. Попробуй /compliment");
+            System.out.println("LOG: Пользователь прислал нетекстовое сообщение.");
         }
     }
 
