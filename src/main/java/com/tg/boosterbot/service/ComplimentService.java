@@ -28,6 +28,7 @@ public class ComplimentService implements Filter {
 
     @Override
     public void execute(ProcessContext context) {
+
         List<String> tags = context.getTags();
 
         if (tags.contains("unknown")) {
@@ -36,10 +37,12 @@ public class ComplimentService implements Filter {
         }
 
         Set<String> contextTags = new HashSet<>(tags);
-        String bestKey = "default";
+
+        String bestKey = null;
         int maxMatches = 0;
 
         for (String key : compliments.keySet()) {
+
             if (key.equals("default") || key.equals("unknown")) continue;
 
             Set<String> keyTags = new HashSet<>(Arrays.asList(key.split("_")));
@@ -52,7 +55,29 @@ public class ComplimentService implements Filter {
             }
         }
 
-        setResponse(context, bestKey);
+        if (bestKey != null) {
+            setResponse(context, bestKey);
+            return;
+        }
+
+        if (contextTags.contains("success") && compliments.containsKey("success")) {
+            setResponse(context, "success");
+            return;
+        }
+
+        if (contextTags.contains("sad") && compliments.containsKey("sad")) {
+            setResponse(context, "sad");
+            return;
+        }
+
+        for (String tag : contextTags) {
+            if (compliments.containsKey(tag)) {
+                setResponse(context, tag);
+                return;
+            }
+        }
+
+        setResponse(context, "default");
     }
 
     private void setResponse(ProcessContext context, String key) {
