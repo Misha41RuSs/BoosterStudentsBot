@@ -13,7 +13,7 @@ public class ComplimentService {
     private ComplimentData data;
     private final Random random = new Random();
 
-    @PostConstruct // Загрузится один раз при старте
+    @PostConstruct
     public void init() throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         data = mapper.readValue(new ClassPathResource("compliments.json").getFile(), ComplimentData.class);
