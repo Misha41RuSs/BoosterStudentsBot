@@ -1,6 +1,8 @@
 package com.tg.boosterbot.controller;
 
-import com.tg.boosterbot.service.ComplimentService;
+import com.tg.boosterbot.service.Pipeline;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -10,40 +12,38 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Component
 public class BoosterBot extends TelegramLongPollingBot {
 
+    private static final Logger log = LoggerFactory.getLogger(BoosterBot.class);
+
     @Value("${bot.name}")
     private String botName;
 
     @Value("${bot.token}")
     private String botToken;
 
-    private final ComplimentService complimentService;
+    private final Pipeline pipeline;
 
-    public BoosterBot(ComplimentService complimentService) {
-        this.complimentService = complimentService;
+    public BoosterBot(Pipeline pipeline) {
+        this.pipeline = pipeline;
     }
 
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
+
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
             String userFirstName = update.getMessage().getFrom().getFirstName();
-            if ("/compliment".equals(messageText)) {
-                String answer = complimentService.getRandomCompliment(userFirstName);
-                sendAnswer(chatId, answer);
-                System.out.println("LOG: Пользователь " + userFirstName + " получил комплимент: [" + answer + "]");
 
-            } else if (messageText.startsWith("/")) {
-                sendAnswer(chatId, "Извини, " + userFirstName + ", я пока знаю только команду /compliment");
-                System.out.println("LOG: Пользователь " + userFirstName + " ввел неизвестную команду: " + messageText);
+            String answer = pipeline.getBoost(messageText, userFirstName);
 
-            } else {
-                sendAnswer(chatId, "Пожалуйста, используй команду /compliment, чтобы я мог тебя подбодрить!");
-            }
+            sendAnswer(chatId, answer);
+
+            log.info("User: {} | Message: {} | Response: {}",
+                    userFirstName, messageText, answer);
+
         } else if (update.hasMessage()) {
-            long chatId = update.getMessage().getChatId();
-            sendAnswer(chatId, "Я понимаю только текстовые команды. Попробуй /compliment");
-            System.out.println("LOG: Пользователь прислал нетекстовое сообщение.");
+            sendAnswer(update.getMessage().getChatId(),
+                    "Я понимаю только текстовые сообщения! 😊");
         }
     }
 
@@ -51,13 +51,21 @@ public class BoosterBot extends TelegramLongPollingBot {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
+
         try {
             execute(message);
         } catch (Exception e) {
-            System.err.println("Ошибка при отправке: " + e.getMessage());
+            log.error("Ошибка отправки сообщения", e);
         }
     }
 
-    @Override public String getBotUsername() { return botName; }
-    @Override public String getBotToken() { return botToken; }
+    @Override
+    public String getBotUsername() {
+        return botName;
+    }
+
+    @Override
+    public String getBotToken() {
+        return botToken;
+    }
 }

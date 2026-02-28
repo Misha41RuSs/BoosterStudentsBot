@@ -1,26 +1,63 @@
 package com.tg.boosterbot.service;
 
-import com.tg.boosterbot.model.ComplimentData;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Service;
+import com.tg.boosterbot.model.ProcessContext;
+import com.tg.boosterbot.service.filters.Filter;
 import jakarta.annotation.PostConstruct;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
-import java.util.Random;
+import java.io.InputStream;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
-public class ComplimentService {
-    private ComplimentData data;
-    private final Random random = new Random();
+@Order(4)
+public class ComplimentService implements Filter {
 
-    @PostConstruct // Загрузится один раз при старте
+    private Map<String, List<String>> compliments;
+
+    @PostConstruct
     public void init() throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        data = mapper.readValue(new ClassPathResource("compliments.json").getFile(), ComplimentData.class);
+        InputStream is = getClass().getResourceAsStream("/compliments.json");
+        compliments = mapper.readValue(is, new TypeReference<Map<String, List<String>>>() {});
     }
 
-    public String getRandomCompliment(String name) {
-        String phrase = data.getPhrases().get(random.nextInt(data.getPhrases().size()));
-        return String.format(phrase, name);
+    @Override
+    public void execute(ProcessContext context) {
+        List<String> tags = context.getTags();
+
+        if (tags.contains("unknown")) {
+            setResponse(context, "unknown");
+            return;
+        }
+
+        Set<String> contextTags = new HashSet<>(tags);
+        String bestKey = "default";
+        int maxMatches = 0;
+
+        for (String key : compliments.keySet()) {
+            if (key.equals("default") || key.equals("unknown")) continue;
+
+            Set<String> keyTags = new HashSet<>(Arrays.asList(key.split("_")));
+
+            if (contextTags.containsAll(keyTags)) {
+                if (keyTags.size() > maxMatches) {
+                    maxMatches = keyTags.size();
+                    bestKey = key;
+                }
+            }
+        }
+
+        setResponse(context, bestKey);
+    }
+
+    private void setResponse(ProcessContext context, String key) {
+        List<String> phrases = compliments.getOrDefault(key, compliments.get("default"));
+        String phrase = phrases.get(ThreadLocalRandom.current().nextInt(phrases.size()));
+        context.setResultPhrase(String.format(phrase, context.getUserName()));
     }
 }
