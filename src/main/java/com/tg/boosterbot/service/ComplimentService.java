@@ -83,6 +83,6 @@ public class ComplimentService implements Filter {
     private void setResponse(ProcessContext context, String key) {
         List<String> phrases = compliments.getOrDefault(key, compliments.get("default"));
         String phrase = phrases.get(ThreadLocalRandom.current().nextInt(phrases.size()));
-        context.setResultPhrase(String.format(phrase, context.getUserName()));
+        context.setTemplatePhrase(phrase);
     }
 }

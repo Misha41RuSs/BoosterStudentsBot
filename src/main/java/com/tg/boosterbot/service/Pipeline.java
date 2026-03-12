@@ -14,8 +14,9 @@ public class Pipeline {
         this.filters = filters;
     }
 
-    public String getBoost(String message, String name) {
+    public String getBoost(Long chatId, String message, String name) {
         ProcessContext context = ProcessContext.builder()
+                .chatId(chatId)
                 .userName(name)
                 .userMessage(message)
                 .build();

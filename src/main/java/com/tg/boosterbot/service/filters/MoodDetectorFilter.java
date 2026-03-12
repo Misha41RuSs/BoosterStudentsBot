@@ -87,19 +87,24 @@ public class MoodDetectorFilter implements Filter {
         log.info("Вклад слов в настроение: {}", wordLogs);
 
         // проверяем усилители
-        for (String word : words) {
+        for (Map.Entry<String, Integer> entry : tf.entrySet()) {
+            String word = entry.getKey();
+            int freq = entry.getValue();
+            
             if (INTENSIFIERS.containsKey(word)) {
+                // Применяем усилитель столько раз, сколько встретилось слово
+                double multiplier = Math.pow(INTENSIFIERS.get(word), freq);
 
-                double multiplier = INTENSIFIERS.get(word);
-
-                log.info("Найден усилитель '{}' → множитель {}", word, multiplier);
+                log.info("Найден усилитель '{}' ({} раз) → множитель {}", word, freq, multiplier);
 
                 score *= multiplier;
             }
         }
 
-        // нормализация по длине текста
-        double normalizedScore = words.length > 0 ? score / words.length : score;
+        // нормализация по количеству значимых очищенных слов, 
+        // используем квадратный корень, чтобы смягчить штраф за длину текста
+        int cleanWordsCount = tf.values().stream().mapToInt(Integer::intValue).sum();
+        double normalizedScore = cleanWordsCount > 0 ? score / Math.max(1, Math.sqrt(cleanWordsCount)) : score;
 
         log.info("Raw score = {}", score);
         log.info("Normalized score = {}", normalizedScore);

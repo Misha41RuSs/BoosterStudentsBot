@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: boosterbot-db
+    restart: always
+    environment:
+      POSTGRES_USER: booster
+      POSTGRES_PASSWORD: booster_password
+      POSTGRES_DB: booster_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+
+volumes:
+  postgres-data:

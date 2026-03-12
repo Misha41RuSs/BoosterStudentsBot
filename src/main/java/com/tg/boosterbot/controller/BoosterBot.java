@@ -34,7 +34,7 @@ public class BoosterBot extends TelegramLongPollingBot {
             long chatId = update.getMessage().getChatId();
             String userFirstName = update.getMessage().getFrom().getFirstName();
 
-            String answer = pipeline.getBoost(messageText, userFirstName);
+            String answer = pipeline.getBoost(chatId, messageText, userFirstName);
 
             sendAnswer(chatId, answer);
 
