@@ -6,7 +6,6 @@ import com.tg.boosterbot.entity.UserStats;
 import com.tg.boosterbot.model.ProcessContext;
 import com.tg.boosterbot.repository.HistoryRepository;
 import com.tg.boosterbot.repository.UserStatsRepository;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
@@ -16,13 +15,17 @@ import java.util.List;
 
 @Component
 @Order(7)
-@RequiredArgsConstructor
 public class DatabaseStorageFilter implements Filter {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseStorageFilter.class);
 
     private final HistoryRepository historyRepository;
     private final UserStatsRepository userStatsRepository;
+
+    public DatabaseStorageFilter(HistoryRepository historyRepository, UserStatsRepository userStatsRepository) {
+        this.historyRepository = historyRepository;
+        this.userStatsRepository = userStatsRepository;
+    }
 
     @Override
     public void execute(ProcessContext context) {
@@ -42,10 +45,9 @@ public class DatabaseStorageFilter implements Filter {
             detectedMood = "sad";
         }
 
-        // 1. Сохраняем историю
         History history = History.builder()
                 .user(user)
-                .command("message") // или получать команду, если была
+                .command("message")
                 .messageText(context.getUserMessage())
                 .detectedMood(detectedMood)
                 .responseType(context.getTemplatePhrase() != null ? "boost" : "unknown")
@@ -53,12 +55,11 @@ public class DatabaseStorageFilter implements Filter {
         
         historyRepository.save(history);
 
-        // 2. Обновляем статистику пользователя
         UserStats stats = user.getStats();
         if (stats != null) {
-            stats.setBoostsReceived(stats.getBoostsReceived() + 1);
+            Integer currentBoosts = stats.getBoostsReceived();
+            stats.setBoostsReceived((currentBoosts == null ? 0 : currentBoosts) + 1);
             stats.setLastMood(detectedMood);
-            // Если в будущем вы будете считать отдельно `complimentsReceived`, можно добавить логику
             userStatsRepository.save(stats);
         }
         

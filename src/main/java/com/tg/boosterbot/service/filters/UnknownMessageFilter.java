@@ -20,7 +20,11 @@ public class UnknownMessageFilter implements Filter {
 
         List<String> tags = context.getTags();
 
-        boolean hasEmotionalContext = tags.contains("sad") || tags.contains("success");
+        boolean hasEmotionalContext = tags.contains("success") || 
+                                      tags.contains("super_success") || 
+                                      tags.contains("sad") || 
+                                      tags.contains("super_sad") || 
+                                      tags.contains("neutral");
 
         if (!hasEmotionalContext) {
             tags.add("unknown");

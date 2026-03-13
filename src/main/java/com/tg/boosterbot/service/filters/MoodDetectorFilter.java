@@ -16,7 +16,6 @@ public class MoodDetectorFilter implements Filter {
 
     private static final Map<String, Double> WORD_WEIGHTS = Map.ofEntries(
 
-            // позитив
             Map.entry("отлично", 3.0),
             Map.entry("супер", 2.5),
             Map.entry("ура", 2.5),
@@ -92,7 +91,7 @@ public class MoodDetectorFilter implements Filter {
             int freq = entry.getValue();
             
             if (INTENSIFIERS.containsKey(word)) {
-                // Применяем усилитель столько раз, сколько встретилось слово
+                // Применяем усилитель в степени кол-ва повторений: multiplier = base^freq
                 double multiplier = Math.pow(INTENSIFIERS.get(word), freq);
 
                 log.info("Найден усилитель '{}' ({} раз) → множитель {}", word, freq, multiplier);
@@ -109,19 +108,23 @@ public class MoodDetectorFilter implements Filter {
         log.info("Raw score = {}", score);
         log.info("Normalized score = {}", normalizedScore);
 
-        if (normalizedScore >= 0.3) {
-
+        if (normalizedScore >= 1.0) {
+            context.getTags().add("success");
+            context.getTags().add("super_success");
+            log.info("Определено настроение: SUPER_SUCCESS");
+        } else if (normalizedScore >= 0.3) {
             context.getTags().add("success");
             log.info("Определено настроение: SUCCESS");
-
+        } else if (normalizedScore <= -1.0) {
+            context.getTags().add("sad");
+            context.getTags().add("super_sad");
+            log.info("Определено настроение: SUPER_SAD");
         } else if (normalizedScore <= -0.3) {
-
             context.getTags().add("sad");
             log.info("Определено настроение: SAD");
-
         } else {
-
-            log.info("Настроение нейтральное");
+            context.getTags().add("neutral");
+            log.info("Настроение: NEUTRAL");
         }
 
         log.info("=== Конец анализа настроения ===");

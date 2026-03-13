@@ -1,5 +1,6 @@
 package com.tg.boosterbot.service;
 
+import com.tg.boosterbot.model.BoostResult;
 import com.tg.boosterbot.model.ProcessContext;
 import com.tg.boosterbot.service.filters.Filter;
 import org.springframework.stereotype.Service;
@@ -14,7 +15,7 @@ public class Pipeline {
         this.filters = filters;
     }
 
-    public String getBoost(Long chatId, String message, String name) {
+    public BoostResult getBoost(Long chatId, String message, String name) {
         ProcessContext context = ProcessContext.builder()
                 .chatId(chatId)
                 .userName(name)
@@ -23,6 +24,6 @@ public class Pipeline {
 
         filters.forEach(f -> f.execute(context));
 
-        return context.getResultPhrase();
+        return new BoostResult(context.getResultPhrase(), context.getPhraseHash(), context.getTags());
     }
 }

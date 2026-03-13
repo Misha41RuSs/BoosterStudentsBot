@@ -28,3 +28,12 @@ CREATE TABLE IF NOT EXISTS history (
     response_type VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Таблица для сохранения лайков/дизлайков на фразы
+CREATE TABLE IF NOT EXISTS user_preferences (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    phrase_hash VARCHAR(255) NOT NULL,
+    score INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

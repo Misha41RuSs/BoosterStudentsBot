@@ -5,17 +5,20 @@ import com.tg.boosterbot.entity.UserStats;
 import com.tg.boosterbot.model.ProcessContext;
 import com.tg.boosterbot.repository.UserRepository;
 import com.tg.boosterbot.repository.UserStatsRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Order(1)
-@RequiredArgsConstructor
 public class NameExtractorFilter implements Filter {
 
     private final UserRepository userRepository;
     private final UserStatsRepository userStatsRepository;
+
+    public NameExtractorFilter(UserRepository userRepository, UserStatsRepository userStatsRepository) {
+        this.userRepository = userRepository;
+        this.userStatsRepository = userStatsRepository;
+    }
 
     @Override
     public void execute(ProcessContext context) {
@@ -37,7 +40,6 @@ public class NameExtractorFilter implements Filter {
             return newUser;
         });
 
-        // Обновляем имя, если оно изменилось в Telegram
         if (context.getUserName() != null && !context.getUserName().equals(user.getFirstName())) {
             user.setFirstName(context.getUserName());
             userRepository.save(user);
