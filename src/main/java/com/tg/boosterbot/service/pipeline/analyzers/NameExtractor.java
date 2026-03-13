@@ -1,21 +1,22 @@
-package com.tg.boosterbot.service.filters;
+package com.tg.boosterbot.service.pipeline.analyzers;
 
 import com.tg.boosterbot.entity.User;
 import com.tg.boosterbot.entity.UserStats;
 import com.tg.boosterbot.model.ProcessContext;
 import com.tg.boosterbot.repository.UserRepository;
 import com.tg.boosterbot.repository.UserStatsRepository;
+import com.tg.boosterbot.service.pipeline.PipelineStep;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Order(1)
-public class NameExtractorFilter implements Filter {
+public class NameExtractor implements PipelineStep {
 
     private final UserRepository userRepository;
     private final UserStatsRepository userStatsRepository;
 
-    public NameExtractorFilter(UserRepository userRepository, UserStatsRepository userStatsRepository) {
+    public NameExtractor(UserRepository userRepository, UserStatsRepository userStatsRepository) {
         this.userRepository = userRepository;
         this.userStatsRepository = userStatsRepository;
     }

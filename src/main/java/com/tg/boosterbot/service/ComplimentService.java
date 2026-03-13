@@ -6,7 +6,7 @@ import com.tg.boosterbot.entity.User;
 import com.tg.boosterbot.entity.UserPreference;
 import com.tg.boosterbot.repository.UserPreferenceRepository;
 import com.tg.boosterbot.model.ProcessContext;
-import com.tg.boosterbot.service.filters.Filter;
+import com.tg.boosterbot.service.pipeline.PipelineStep;
 import jakarta.annotation.PostConstruct;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @Order(4)
-public class ComplimentService implements Filter {
+public class ComplimentService implements PipelineStep {
 
     private Map<String, List<String>> compliments;
     private final UserPreferenceRepository userPreferenceRepository;

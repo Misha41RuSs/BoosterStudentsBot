@@ -1,4 +1,4 @@
-package com.tg.boosterbot.service.filters;
+package com.tg.boosterbot.service.pipeline.storage;
 
 import com.tg.boosterbot.entity.History;
 import com.tg.boosterbot.entity.User;
@@ -6,6 +6,7 @@ import com.tg.boosterbot.entity.UserStats;
 import com.tg.boosterbot.model.ProcessContext;
 import com.tg.boosterbot.repository.HistoryRepository;
 import com.tg.boosterbot.repository.UserStatsRepository;
+import com.tg.boosterbot.service.pipeline.PipelineStep;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
@@ -15,14 +16,14 @@ import java.util.List;
 
 @Component
 @Order(7)
-public class DatabaseStorageFilter implements Filter {
+public class DatabaseStorage implements PipelineStep {
 
-    private static final Logger log = LoggerFactory.getLogger(DatabaseStorageFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(DatabaseStorage.class);
 
     private final HistoryRepository historyRepository;
     private final UserStatsRepository userStatsRepository;
 
-    public DatabaseStorageFilter(HistoryRepository historyRepository, UserStatsRepository userStatsRepository) {
+    public DatabaseStorage(HistoryRepository historyRepository, UserStatsRepository userStatsRepository) {
         this.historyRepository = historyRepository;
         this.userStatsRepository = userStatsRepository;
     }
@@ -32,13 +33,12 @@ public class DatabaseStorageFilter implements Filter {
         User user = context.getUserEntity();
 
         if (user == null) {
-            log.warn("DatabaseStorageFilter: Пользователь не найден в контексте, пропускаем сохранение");
+            log.warn("DatabaseStorage: пользователь не найден в контексте, сохранение пропущено");
             return;
         }
 
         List<String> tags = context.getTags();
         String detectedMood = "neutral";
-        
         if (tags.contains("success")) {
             detectedMood = "success";
         } else if (tags.contains("sad")) {
@@ -52,7 +52,6 @@ public class DatabaseStorageFilter implements Filter {
                 .detectedMood(detectedMood)
                 .responseType(context.getTemplatePhrase() != null ? "boost" : "unknown")
                 .build();
-        
         historyRepository.save(history);
 
         UserStats stats = user.getStats();
@@ -62,7 +61,7 @@ public class DatabaseStorageFilter implements Filter {
             stats.setLastMood(detectedMood);
             userStatsRepository.save(stats);
         }
-        
+
         log.info("Статистика и история успешно сохранены для пользователя {}", user.getFirstName());
     }
 }

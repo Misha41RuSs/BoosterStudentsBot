@@ -1,6 +1,7 @@
-package com.tg.boosterbot.service.filters;
+package com.tg.boosterbot.service.pipeline.analyzers;
 
 import com.tg.boosterbot.model.ProcessContext;
+import com.tg.boosterbot.service.pipeline.PipelineStep;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
@@ -10,12 +11,11 @@ import java.util.*;
 
 @Component
 @Order(2)
-public class MoodDetectorFilter implements Filter {
+public class MoodDetector implements PipelineStep {
 
-    private static final Logger log = LoggerFactory.getLogger(MoodDetectorFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(MoodDetector.class);
 
     private static final Map<String, Double> WORD_WEIGHTS = Map.ofEntries(
-
             Map.entry("отлично", 3.0),
             Map.entry("супер", 2.5),
             Map.entry("ура", 2.5),
@@ -25,8 +25,6 @@ public class MoodDetectorFilter implements Filter {
             Map.entry("круто", 2.5),
             Map.entry("получилось", 2.0),
             Map.entry("молодец", 2.5),
-
-            // негатив
             Map.entry("устал", -1.5),
             Map.entry("грустно", -2.5),
             Map.entry("плохо", -2.0),
@@ -37,7 +35,6 @@ public class MoodDetectorFilter implements Filter {
             Map.entry("провал", -3.0)
     );
 
-
     private static final Map<String, Double> INTENSIFIERS = Map.of(
             "очень", 1.5,
             "сильно", 1.5,
@@ -46,7 +43,6 @@ public class MoodDetectorFilter implements Filter {
 
     @Override
     public void execute(ProcessContext context) {
-
         String message = context.getUserMessage().toLowerCase();
 
         log.info("=== Начинаем анализ настроения ===");
@@ -55,53 +51,40 @@ public class MoodDetectorFilter implements Filter {
         String[] words = message.split("\\s+");
 
         Map<String, Integer> tf = new HashMap<>();
-
         for (String word : words) {
             word = word.replaceAll("[^а-яА-Я]", "");
             if (word.isEmpty()) continue;
-
             tf.put(word, tf.getOrDefault(word, 0) + 1);
         }
 
         log.info("TF слов: {}", tf);
 
         double score = 0.0;
-
         List<String> wordLogs = new ArrayList<>();
 
         for (Map.Entry<String, Integer> entry : tf.entrySet()) {
-
             String word = entry.getKey();
             int freq = entry.getValue();
-
             double weight = WORD_WEIGHTS.getOrDefault(word, 0.0);
-
             double contribution = weight * freq;
-
             score += contribution;
-
             wordLogs.add(word + "(" + weight + " * " + freq + ")=" + contribution);
         }
 
         log.info("Вклад слов в настроение: {}", wordLogs);
 
-        // проверяем усилители
         for (Map.Entry<String, Integer> entry : tf.entrySet()) {
             String word = entry.getKey();
             int freq = entry.getValue();
-            
             if (INTENSIFIERS.containsKey(word)) {
                 // Применяем усилитель в степени кол-ва повторений: multiplier = base^freq
                 double multiplier = Math.pow(INTENSIFIERS.get(word), freq);
-
                 log.info("Найден усилитель '{}' ({} раз) → множитель {}", word, freq, multiplier);
-
                 score *= multiplier;
             }
         }
 
-        // нормализация по количеству значимых очищенных слов, 
-        // используем квадратный корень, чтобы смягчить штраф за длину текста
+        // Нормализация по sqrt(n), где n — кол-во значимых слов; смягчает масштаб при длинных текстах
         int cleanWordsCount = tf.values().stream().mapToInt(Integer::intValue).sum();
         double normalizedScore = cleanWordsCount > 0 ? score / Math.max(1, Math.sqrt(cleanWordsCount)) : score;
 

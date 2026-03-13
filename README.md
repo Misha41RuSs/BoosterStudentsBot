@@ -23,7 +23,10 @@ Telegram-бот для поддержки эмоционального сост�
 | Независимость контекстов (время, настроение) | Каждый фильтр отвечает строго за свою область |
 | Расширяемость | Новый фильтр = новый `@Component` + `@Order` |
 | Тестируемость | Каждый фильтр тестируется изолированно |
-| Читаемость | Пайплайн — это явная последовательность шагов |
+| Читаемость | Пайплайн — явная последовательность шагов |
+| Разделение анализа и генерации | Фильтры только проставляют теги; генератор использует их |
+
+> ⚠️ Важное архитектурное разграничение: в этом проекте фильтры **только анализируют** входные данные и проставляют теги в `ProcessContext`. Генерацию ответа выполняет отдельный компонент (`ComplimentService`), который является **генератором**, а не фильтром. `DatabaseStorageFilter` является **стоком (Sink)** — он потребляет финальный контекст и ничего не возвращает в пайплайн.
 
 ### Пайплайн запроса
 
@@ -31,35 +34,37 @@ Telegram-бот для поддержки эмоционального сост�
 Telegram Update
       │
       ▼
-BoosterBot (контроллер)
+BoosterBot (контроллер, Dispatcher)
       │
       ▼  pipeline.getBoost(chatId, message, name)
       │
-      ├── [@Order 0] WeekdayFilter      → tag: "weekend" (если сб/вс)
+      ╔══════════════════════════════╗
+      ║   FILTERS — Фаза анализа    ║
+      ╠══════════════════════════════╣
+      ├── [@Order 0] WeekdayAnalyzer       → tag: "weekend"
+      ├── [@Order 1] NameExtractor          → находит/создаёт User в БД
+      ├── [@Order 1] TimeOfDayAnalyzer      → tag: "morning"/"day"/"evening"/"night"
+      ├── [@Order 2] MoodDetector           → tag: "success"/"super_success"/"sad"/"super_sad"/"neutral"
+      │                                      (TF-оценка + усилители + нормализация по sqrt(n))
+      └── [@Order 3] UnknownMessageHandler  → tag: "unknown" если нет эмоциональных тегов
       │
-      ├── [@Order 1] NameExtractorFilter → находит/создаёт пользователя в БД
+      ╔══════════════════════════════╗
+      ║  PROCESSOR — Фаза генерации ║
+      ╠══════════════════════════════╣
+      ├── [@Order 4] ComplimentService      → GENERATOR: выбирает фразу из JSON по тегам
+      │                                      взвешенный рандом по user_preferences
+      └── [@Order 5] PersonalizationProcessor → TRANSFORMER: подставляет имя в шаблон
       │
-      ├── [@Order 1] TimeOfDayFilter     → tag: "morning" / "day" / "evening" / "night"
+      ╔══════════════════════════════╗
+      ║      SINK — Сохранение       ║
+      ╠══════════════════════════════╣
+      └── [@Order 7] DatabaseStorage        → сохраняет историю и статистику в PostgreSQL
       │
-      ├── [@Order 2] MoodDetectorFilter  → tag: "success"/"super_success"/"sad"/"super_sad"/"neutral"
-      │                                   (TF-анализ слов + усилители + нормализация по sqrt(n))
+      ▼
+BoostResult(text, phraseHash, tags)
       │
-      ├── [@Order 3] UnknownMessageFilter → tag: "unknown" если нет эмоций
-      │
-      ├── [@Order 4] ComplimentService   → выбор фразы из JSON по тегам + взвешенный рандом по предпочтениям
-      │
-      ├── [@Order 5] PersonalizationFilter → подстановка имени пользователя в шаблон %s
-      │
-      └── [@Order 7] DatabaseStorageFilter → сохранение истории и статистики в PostgreSQL
-            │
-            ▼
-      BoostResult(text, phraseHash, tags)
-            │
-            ▼
-      Emoji форматирование по тегу (в контроллере)
-            │
-            ▼
-      Ответ + inline кнопки 👍 / 👎
+      ▼
+BoosterBot: форматирование (emoji по тегу) + отправка + inline кнопки 👍/👎
 ```
 
 ### Ключевые классы
